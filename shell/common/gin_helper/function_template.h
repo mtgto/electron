@@ -7,6 +7,7 @@
 
 #include "base/bind.h"
 #include "base/callback.h"
+#include "base/optional.h"
 #include "gin/arguments.h"
 #include "shell/common/gin_helper/arguments.h"
 #include "shell/common/gin_helper/destroyable.h"
@@ -86,8 +87,21 @@ bool GetNextArgument(gin::Arguments* args,
   if (is_first && (create_flags & HolderIsFirstArgument) != 0) {
     return args->GetHolder(result);
   } else {
-    return args->GetNext(result);
+    return static_cast<gin_helper::Arguments*>(args)->GetNext(result);
   }
+}
+
+// Support base::Optional as output, which always advances the counter no
+// matter whether the conversion succeeds.
+template <typename T>
+bool GetNextArgument(gin::Arguments* args,
+                     int create_flags,
+                     bool is_first,
+                     base::Optional<T>* result) {
+  T converted;
+  if (args->GetNext(&converted))
+    result->emplace(converted);
+  return true;
 }
 
 // For advanced use cases, we allow callers to request the unparsed Arguments
